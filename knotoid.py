@@ -2,7 +2,7 @@
 import os, sys, subprocess
 from random import random, uniform
 _thisdir = os.path.split(os.path.abspath(__file__))[0]
-BUILD = './build'
+BUILD = os.path.join(_thisdir,'build')
 
 def build():
 	if not os.path.isdir(BUILD):
@@ -49,12 +49,9 @@ def calc_knotoid( points, seed=1, cyclic=False, subchain=None, projections=None,
 		dump.append('%s %s %s' % (x,y,z))
 
 	open(tmp,'w').write( '\n'.join(dump) )
-
 	print(cmd)
 	subprocess.check_call(cmd)
-
 	out = open(output).read()
-	print(out)
 	return out
 
 
@@ -63,7 +60,7 @@ def test():
 	for i in range(8):
 		points.append([uniform(1,1),uniform(1,1),uniform(1,1)])
 	print('random test:', points)
-	calc_knotoid(points)
+	print(calc_knotoid(points))
 
 
 if '--test' in sys.argv:
