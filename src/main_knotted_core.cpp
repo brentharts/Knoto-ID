@@ -1185,3 +1185,117 @@ vector<string> split_input(string str)
     }
   return result;
 }
+
+#include <omp.h>
+
+string get_jones_parallel(Polygon & polygon, double & frequ, unsigned long nb_projections, string closure_method) {
+  std::map<std::string, double> histogram_jones; 
+  std::vector<std::string> local_jones_results(omp_get_max_threads()); 
+  std::vector<double> local_frequ_results(omp_get_max_threads()); 
+
+#pragma omp parallel for num_threads(omp_get_max_threads())
+  for (unsigned long p = 0; p < nb_projections; p++) {
+    int thread_id = omp_get_thread_num(); 
+    Polygon polygontmp = polygon;
+    double dx, dy, dz, weight;
+
+    if(projectionlist_projections.size()>0) {
+      dx=projectionlist_projections[p][0];
+      dy=projectionlist_projections[p][1];
+      dz=projectionlist_projections[p][2];
+      weight=projectionlist_weights[p];
+    } else {
+      double u=random01();
+      double v=random01();
+      double theta=2*3.14159265358979*u;
+      double phi=acos(2*v-1);
+      dx=cos(theta)*sin(phi);
+      dy=sin(theta)*sin(phi);
+      dz=cos(phi);
+      weight=1/(double)nb_projections;
+    }
+
+    //close polygon
+    polygontmp.set_closure(dx,dy,dz,closure_method);
+    if(flag_3d_reduction) {
+      if(flag_debug)cerr<<"Simplifying 3D curve"<<endl;
+      polygontmp.simplify_polygon(dx,dy,dz);
+      if(flag_debug)cerr<<"3D curve has "<<polygontmp.get_nb_points()<<" vertices"<<endl;
+    }
+
+    PlanarDiagram diagram(flag_planar);
+    bool flag_valid_projection=true;
+    try {
+      diagram=polygontmp.get_planar_diagram(dx,dy,dz,flag_planar);
+    } catch (exception& e) {
+      //projection failed
+      flag_valid_projection=false;
+      cerr<< e.what()<<endl;
+    }
+
+    if(flag_valid_projection) {
+      diagram.set_debug(flag_debug);
+      if(flag_simplify_diagram) {
+        diagram.simplify();
+        if(max_nb_random_moves_III>0) {
+          diagram.simplify_with_random_reidemeister_moves_III(max_nb_random_moves_III,max_nb_unsuccessfull_random_moves_III);
+          diagram.simplify();
+        }
+      }
+      //////////evaluate jones//////////////
+      PolynomialInvariant jones(diagram,flag_planar,flag_arrow_polynomial,flag_debug);
+      jones.set_timeout(timeout);
+      Polynomial jones_polynomial;
+      /////////////jone bgl
+      try {
+        if(jones_method=="simple")
+          jones_polynomial=jones.get_polynomial_simple();
+        else if(jones_method=="recursive")
+          jones_polynomial=jones.get_polynomial_recursive("default",true);
+        else if(jones_method=="recursive-crossing-order")
+          jones_polynomial=jones.get_polynomial_recursive("crossing_order",true);
+        else if(jones_method=="recursive-arc-order")
+          jones_polynomial=jones.get_polynomial_recursive("arc_order",true);
+        else if(jones_method=="recursive-region-order")
+          jones_polynomial=jones.get_polynomial_recursive("region_order",true);
+        else {
+          cerr<<"********************************************************"<<endl;
+          cerr<<"ERROR: --polynomial-method="<<jones_method<<" not implemented"<<endl;
+          cerr<<"********************************************************"<<endl;
+          exit(1);
+        }
+        local_jones_results[thread_id] = jones_polynomial.to_string();
+        local_frequ_results[thread_id] = weight;
+      } catch (exception& e) {
+        //timeout
+        local_jones_results[thread_id] = "TIMEOUT";
+        local_frequ_results[thread_id] = weight;
+      }
+
+    } else {
+      //flag_valid_projection==false
+      local_jones_results[thread_id] = "failed_projection";
+      local_frequ_results[thread_id] = weight;
+    }
+  }
+
+  // Reduce results to global histogram
+  #pragma omp critical
+  {
+    for (int i = 0; i < omp_get_num_threads(); ++i) {
+      histogram_jones[local_jones_results[i]] += local_frequ_results[i];
+    }
+  }
+
+  // Find max frequency 
+  string jones = "";
+  frequ = 0;
+  for (const auto& entry : histogram_jones) {
+    if (entry.second >= frequ) {
+      frequ = entry.second;
+      jones = entry.first;
+    }
+  }
+
+  return jones;
+}
