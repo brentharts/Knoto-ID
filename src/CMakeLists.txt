@@ -36,7 +36,10 @@ endif("${CMAKE_VERSION}" VERSION_LESS "2.8.8" )
 target_link_libraries(polynomial_invariant ${LIBRARIES})
 install (TARGETS polynomial_invariant DESTINATION bin COMPONENT applications)
 
-
+find_package(OpenMP REQUIRED)
+if(OpenMP_CXX_FOUND)
+       target_link_libraries(knotted_core PUBLIC OpenMP::OpenMP_CXX)
+   endif()
 target_link_libraries(knotted_core ${LIBRARIES})
 install (TARGETS knotted_core DESTINATION bin COMPONENT applications)
 
