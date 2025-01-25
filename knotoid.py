@@ -52,8 +52,33 @@ def calc_knotoid( points, seed=1, cyclic=False, subchain=None, projections=None,
 	print(cmd)
 	subprocess.check_call(cmd)
 	out = open(output).read()
+	return parse(out)
+
+def parse(txt):
+	out = []
+	for ln in txt.splitlines():
+		if ln.startswith('#'): continue
+		if not ln.strip(): continue
+		a,b,c,d,e = ln.split('\t')
+		p = {
+			'index_first': int(a),
+			'index_last' : int(b),
+			'length'     : int(c),
+			'frequency'  : float(d),
+			'polynomial' : e
+		}
+		if e=='failed_projection':
+			p['valid'] = False
+		else:
+			p['valid'] = True
+		out.append(p)
 	return out
 
+def test_parse():
+	output = '/tmp/knotoid.out'
+	out = open(output).read()
+	info = parse(out)
+	print(info)
 
 def test():
 	points = []
@@ -65,3 +90,5 @@ def test():
 
 if '--test' in sys.argv:
 	test()
+if '--test-parse' in sys.argv:
+	test_parse()
