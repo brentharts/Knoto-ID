@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import os, sys, subprocess
+import os, sys, subprocess, time
 from random import random, uniform
 _thisdir = os.path.split(os.path.abspath(__file__))[0]
 BUILD = os.path.join(_thisdir,'build')
@@ -50,7 +50,10 @@ def calc_knotoid( points, seed=1, cyclic=False, subchain=None, projections=None,
 
 	open(tmp,'w').write( '\n'.join(dump) )
 	print(cmd)
+	start = time.time()
 	subprocess.check_call(cmd)
+	delta = time.time()-start
+	print('calc_knotoid seconds:', delta)
 	out = open(output).read()
 	return parse(out)
 
@@ -80,15 +83,41 @@ def test_parse():
 	info = parse(out)
 	print(info)
 
-def test():
+def test(num=8):
 	points = []
-	for i in range(8):
+	for i in range(num):
 		points.append([uniform(1,1),uniform(1,1),uniform(1,1)])
 	print('random test:', points)
 	print(calc_knotoid(points))
 
+def bench():
+	points = trefoil(100)
+	print(calc_knotoid(points))
+
+## from https://github.com/SPOCKnots/pyknotid/blob/master/pyknotid/make/named.py 
+def unknot(num_points=100):
+	'''Returns a simple circle.'''
+	import numpy as n
+	data = n.zeros((num_points, 3), dtype=n.float64)
+	ts = n.linspace(0, 2*n.pi, num_points)
+	data[:, 0] = 3*n.sin(ts)
+	data[:, 1] = 3*n.cos(ts)
+	data[:, 2] = n.sin(3*ts)
+	return data
+def trefoil(num_points=100):
+	'''Returns a particular trefoil knot conformation.'''
+	print('trefoil benchmark')
+	import numpy as n
+	data = n.zeros((num_points, 3), dtype=n.float64)
+	ts = n.linspace(0, 2*n.pi, num_points)
+	data[:, 0] = (2+n.cos(3*ts))*n.cos(2*ts)
+	data[:, 1] = (2+n.cos(3*ts))*n.sin(2*ts)
+	data[:, 2] = n.sin(3*ts)
+	return data
 
 if '--test' in sys.argv:
 	test()
 if '--test-parse' in sys.argv:
 	test_parse()
+if '--bench' in sys.argv:
+	bench()
