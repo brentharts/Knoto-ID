@@ -20,10 +20,18 @@ if not os.path.isfile(KNOT_CORE):
 	build()
 
 
-def calc_knotoid( points, seed=1, cyclic=False, subchain=None, projections=None, moves=None, stop_moves=None, jones=True):
-	cmd = [KNOT_CORE]
+def calc_knotoid( points, seed=1, cyclic=False, subchain=None, projections=None, moves=None, stop_moves=None, jones=True, planar=False, gdb=False):
+	if gdb:
+		cmd = ['gdb', '-ex', 'run', '--args', KNOT_CORE]
+	else:
+		cmd = [KNOT_CORE]
 	if cyclic:
 		cmd.append('--cyclic-input')
+	else:
+		if planar:
+			cmd.append('--planar')
+	if seed:
+		cmd.append('--seed=%s' % seed)
 	if subchain:
 		assert subchain in ('open', 'direct', 'rays')
 		cmd.append('--closure-method=' + subchain)
