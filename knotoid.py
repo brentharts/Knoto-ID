@@ -76,7 +76,7 @@ def parse(txt):
 			'index_last' : int(b),
 			'length'     : int(c),
 			'frequency'  : float(d),
-			'polynomial' : e
+			'polynomial' : e.replace(' ', '')
 		}
 		if e=='failed_projection':
 			p['valid'] = False
